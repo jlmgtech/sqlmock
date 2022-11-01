@@ -71,12 +71,12 @@ function evaluate(ast) {
         return null;
     }
 
-    console.log(JSON.stringify(ast, null, 4));
-    process.exit();
     switch (ast.type) {
 
         case "select": {
-            const tname  = ast.from[0].table;
+            //console.log(ast);
+            //process.exit();
+            const tables = ast.from;
             const filter = evaluate(ast.where);
             const map    = ast.columns === "*" ?
                 (a => a) :
@@ -86,20 +86,41 @@ function evaluate(ast) {
             const limit   = ast.limit ? ast.limit.map(evaluate) : null;
 
             return () => {
-                let result = database[tname];
-                if (filter) {
-                    result = result.filter(filter);
+                const results = {};
+                for (const table of tables) {
+                    const outname = table.as ?? table.table;
+                    results[outname] = database[table.table];
+                    if (filter) {
+                        results[outname] = results[outname].filter(filter);
+                    }
+                    if (map) {
+                        results[outname] = results[outname].map(map);
+                    }
+                    if (orderby) {
+                        results[outname] = results[outname].sort(orderby);
+                    }
+                    if (limit) {
+                        results[outname] = results[outname].slice(...limit);
+                    }
                 }
-                if (map) {
-                    result = result.map(map);
-                }
-                if (orderby) {
-                    result = result.sort(orderby);
-                }
-                if (limit) {
-                    result = result.slice(...limit);
-                }
-                return result;
+
+                // do a cross join by producing the cartesian product of all
+                // the tables. If the join is an inner join, then we can
+                // simply filter the results using the "ON" predicate.
+
+                // create a cartesian product of the results
+                // https://stackoverflow.com/a/43053803/1123955
+                const keys = Object.keys(results);
+                const values = keys.map(k => results[k]);
+                const cartesian = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
+                const cartesianProduct = values.reduce(cartesian);
+
+                // flatten the cartesian product
+                // https://stackoverflow.com/a/10865042/1123955
+                const flatten = (a, b) => a.concat(b);
+                const flattened = cartesianProduct.reduce(flatten, []);
+
+                return flattened;
             };
 
         }
@@ -193,46 +214,48 @@ function evaluate(ast) {
 //console.info(sql);
 //console.log(JSON.stringify(ast, null, 2));
 const test_queries = [
-    "SELECT * FROM actors, users",
-    "SELECT * FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'",
-    "SELECT * FROM actors WHERE fname LIKE 'C%'",
-    "SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')",
-    "SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname",
-    "SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC",
-    "SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2",
-    "SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2, 3",
-    "SELECT * FROM actors WHERE fname = 'Chris'",
-    "SELECT * FROM actors WHERE fname = 'Chris' AND lname = 'Pratt'",
-    "SELECT * FROM actors WHERE fname = 'Chris' AND lname = 'Pratt' OR fname = 'Bradley' AND lname = 'Cooper'",
-    "SELECT * FROM actors WHERE fname > 'J'",
-    "SELECT * FROM actors WHERE fname > 'J' AND lname > 'L'",
-    "SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname",
-    "SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC",
-    "SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC LIMIT 2",
-    "SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC LIMIT 2, 3",
-    "SELECT * FROM actors WHERE fname < 'J'",
-    "SELECT * FROM actors WHERE fname < 'J' AND lname < 'L'",
-    "SELECT * FROM actors WHERE fname >= 'Jim'",
-    "SELECT * FROM actors WHERE fname >= 'Jim' AND lname >= 'L'",
-    "SELECT * FROM actors WHERE fname <= 'Jim'",
-    "SELECT * FROM actors WHERE fname <= 'Jim' AND lname <= 'L'",
-    "SELECT * FROM actors WHERE fname <> 'Jim'",
-    "SELECT * FROM actors WHERE fname <> 'Jim' AND lname <> 'L'",
-    "SELECT * FROM actors WHERE fname != 'Jim'",
-    "SELECT * FROM actors WHERE fname != 'Jim' AND lname != 'L'",
-    "SELECT * FROM actors WHERE fname IS NULL",
-    "SELECT * FROM actors WHERE fname != NULL",
-    "SELECT * FROM actors WHERE fname IN ('Jim', 'Chris')",
-    "SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P')",
-    "SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname",
-    "SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC",
-    "SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC LIMIT 2",
+    "SELECT * FROM actors JOIN users ON true",
+    //"SELECT * FROM actors, users",
+    //"SELECT * FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'",
+    //"SELECT * FROM actors WHERE fname LIKE 'C%'",
+    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')",
+    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname",
+    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC",
+    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2",
+    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2, 3",
+    //"SELECT * FROM actors WHERE fname = 'Chris'",
+    //"SELECT * FROM actors WHERE fname = 'Chris' AND lname = 'Pratt'",
+    //"SELECT * FROM actors WHERE fname = 'Chris' AND lname = 'Pratt' OR fname = 'Bradley' AND lname = 'Cooper'",
+    //"SELECT * FROM actors WHERE fname > 'J'",
+    //"SELECT * FROM actors WHERE fname > 'J' AND lname > 'L'",
+    //"SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname",
+    //"SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC",
+    //"SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC LIMIT 2",
+    //"SELECT * FROM actors WHERE fname > 'J' AND lname > 'L' ORDER BY fname DESC LIMIT 2, 3",
+    //"SELECT * FROM actors WHERE fname < 'J'",
+    //"SELECT * FROM actors WHERE fname < 'J' AND lname < 'L'",
+    //"SELECT * FROM actors WHERE fname >= 'Jim'",
+    //"SELECT * FROM actors WHERE fname >= 'Jim' AND lname >= 'L'",
+    //"SELECT * FROM actors WHERE fname <= 'Jim'",
+    //"SELECT * FROM actors WHERE fname <= 'Jim' AND lname <= 'L'",
+    //"SELECT * FROM actors WHERE fname <> 'Jim'",
+    //"SELECT * FROM actors WHERE fname <> 'Jim' AND lname <> 'L'",
+    //"SELECT * FROM actors WHERE fname != 'Jim'",
+    //"SELECT * FROM actors WHERE fname != 'Jim' AND lname != 'L'",
+    //"SELECT * FROM actors WHERE fname IS NULL",
+    //"SELECT * FROM actors WHERE fname != NULL",
+    //"SELECT * FROM actors WHERE fname IN ('Jim', 'Chris')",
+    //"SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P')",
+    //"SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname",
+    //"SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC",
+    //"SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC LIMIT 2",
 ];
 
 for (const query of test_queries) {
     const ast = parse(query);
     const strategy = evaluate(ast);
-    console.log("%s\n%s", query, JSON.stringify(strategy(), null, 2));
+    console.log(query);
+    console.log(JSON.stringify(strategy(), null, 2));
     console.log("========================================");
 }
 
