@@ -47,6 +47,37 @@ const schema = {
     },
 };
 
+
+// notes:
+`
+SELECT id FROM users;
+users   .map(u => u.id);
+
+SELECT id FROM users WHERE id = 1;
+users   .filter(u => u.id === 1)
+        .map(u => u.id);
+
+SELECT id FROM users WHERE id = 1 AND name = 'foo';
+users   .filter(u => u.id === 1)
+        .filter(u.name === 'foo')
+        .map(u => u.id);
+
+SELECT * FROM users;
+users   .map(u => u);
+
+SELECT * FROM users, actors;
+ users  .map(u => actors.map(a => ({...u, ...a})))
+        .reduce((a, b) => a.concat(b), []);
+
+SELECT * FROM users, actors WHERE users.id = actors.user_id;
+users   .map(u => actors.filter(a => a.user_id === u.id).map(a => ({...u, ...a})))
+        .reduce((a, b) => a.concat(b), []);
+
+SELECT * FROM users JOIN actors on users.id = actors.user_id;
+users   .map(u => actors.filter(a => a.user_id === u.id).map(a => ({...u, ...a})))
+        .reduce((a, b) => a.concat(b), [])
+`;
+
 const database = {
 
     users: [
@@ -113,7 +144,6 @@ const database = {
         //{id: 55, fname: "Mark", lname: "Ruffalo"},
     ]
 };
-
 
 
 function evaluate(ast) {
@@ -363,6 +393,7 @@ for (const [query, expected] of test_queries) {
         console.error("Result:", result);
     }
     console.log("========================================");
+    console.log("%d results (users %d, actors %d)", result.length, database.users.length, database.actors.length);
 }
 
 
