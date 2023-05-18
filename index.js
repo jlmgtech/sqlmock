@@ -1,6 +1,9 @@
 const {parse, stringify} = require("node-sqlparser");
 const md5 = require('md5');
 
+// for testing MySQL behavior ONLINE:
+// https://onecompiler.com/mysql/3z8ykhufy
+
 function cartesian(tables) {
     // perform cartesian product of all tables
     // https://stackoverflow.com/a/43053803/1123955
