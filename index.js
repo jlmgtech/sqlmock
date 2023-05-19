@@ -1,6 +1,8 @@
 const {parse, stringify} = require("node-sqlparser");
 const md5 = require('md5');
 
+// NEXT TODO: order by 2023-05-19
+
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
@@ -47,6 +49,12 @@ const schema = {
         id: "number",
         fname: "string",
         lname: "string",
+        name: "string",
+    },
+
+    silos: {
+        id: "number",
+        name: "string",
     },
 };
 
@@ -89,10 +97,14 @@ const database = {
         {id: 3, actorid: 4, name: "Jane Smith"},
     ],
 
+    silos: [
+        {id: 0, name: "missile 1"},
+    ],
+
     actors: [
-        {id: 0, fname: null, lname: null},
-        {id: 1, fname: "John", lname: "Doe"},
-        {id: 2, fname: "Jane", lname: "Doe"},
+        {id: 0, name: null, fname: null, lname: null},
+        {id: 1, name: "John Doe", fname: "John", lname: "Doe"},
+        {id: 2, name: "Jane Doe", fname: "Jane", lname: "Doe"},
         //{id: 3, fname: "John", lname: "Smith"},
         //{id: 4, fname: "Jane", lname: "Smith"},
         //{id: 5, fname: "Sarah", lname: "Connor"},
@@ -157,22 +169,60 @@ function evaluate(ast) {
     switch (ast.type) {
 
         case "select": {
-            const tables = ast.from;
+            const from_tables = ast.from.map(f => f.table);
             const filter = evaluate(ast.where);
             const offset = null; // TODO
             const map    = ast.columns === "*" ?
-                (a => a) :
-                (a => ast.columns.map(c => a[c.column]));
+            (a => a) :
+            (record) => {
+                // we want to whitelist only the selected columns
+                // that means, probably create a new record built from
+                // the columns that were explicitly labeled:
 
+                // 1. build an array of columns for each table
+                // whitelist should look like:
+                // {"actors": ["fname"],"users":["id"]}
+                const newrec = {};
+                for (const col of ast.columns) {
+                    const as = col.as;
+                    const type = col.expr?.type ?? "";
+                    const cname = col.expr?.column ?? "";
+                    const column_table = col.expr?.table ?? "";
+                    if (from_tables.length > 1 && !column_table) {
+                        throw new Error(
+                            `Ambiguous column '${cname}' when using ` +
+                            "multiple tables."
+                        );
+                    }
+                    const tname = column_table || from_tables[0];
+                    if (type === "column_ref") {
+                        // just copy over the column from the respective table
+                        // in the old record
+                        newrec[tname] = newrec[tname] || {};
+                        const asname = as || cname;
+                        newrec[tname][asname] = record[tname][cname];
+                    }
+                }
+
+                return newrec;
+            };
+
+            // TODO - order by needs to respect that there are multiple table spaces per record:
             const orderby = ast.orderby ? ast.orderby.map(evaluate)[0] : null;
+
             const limit   = ast.limit ? ast.limit.map(evaluate) : null;
 
             return () => {
+
                 // performing a cross join of the relevant tables:
-                let joined = cartesian(database);
-                //if (columns_use_as) {
-                //    joined = joined.map(row => ({...row, actors: {...row.actors, first: row.actors.fname}}))
-                //}
+                // get relevant tables:
+                const data = {};
+                for (const tname of from_tables) {
+                    data[tname] = database[tname];
+                }
+
+                // perform join:
+                let joined = cartesian(data);
 
                 if (filter) {
                     // filtering using "where" or "on":
@@ -180,6 +230,7 @@ function evaluate(ast) {
                     joined = joined.filter(filter);
                 }
                 if (orderby) {
+                    console.log("ORDER BY: ", orderby.toString());
                     joined = joined.sort(orderby);
                 }
                 if (offset) {
@@ -189,11 +240,34 @@ function evaluate(ast) {
                     joined = joined.slice(0, ...limit);
                 }
 
-                // combine tables into single output object:
-                const result = joined.map(row => 
-                    Object.assign([], ...Object.values(row)));
+                // now filter the columns:
+                joined = joined.map(map);
 
-                return result;
+                // combine tables into single output object:
+                // BUT! Throw an error if there are any duplicate column names
+                const results = [];
+                for (const row of joined) {
+
+                    // check that the rows don't contain any duplicate column names:
+                    const previous_columns = new Set();
+                    for (const [tablename, tablerow] of Object.entries(row)) {
+                        for (const column_name of Object.keys(tablerow)) {
+                            if (previous_columns.has(column_name)) {
+                                throw new Error(`Duplicate column name: ${column_name}`);
+                            }
+                            previous_columns.add(column_name);
+                        }
+
+                    }
+
+                    results.push(Object.assign({}, ...Object.values(row)));
+                }
+
+                return results;
+                //const result = joined.map(row => 
+                //    Object.assign([], ...Object.values(row)));
+
+                //return result;
 
                 //const results = {};
                 //for (const table of tables) {
@@ -240,19 +314,36 @@ function evaluate(ast) {
         }
 
         case "binary_expr": {
+
             const lhs = evaluate(ast.left);
+            if (typeof lhs !== "function") {
+                throw new TypeError(`lhs needs to be a function for '${ast.left.type}' node`);
+            }
+
             const rhs = evaluate(ast.right);
+            if (typeof rhs !== "function") {
+                throw new TypeError(`rhs needs to be a function for '${ast.right.type}' node`);
+            }
+
             switch (ast.operator) {
                 case "LIKE": {
-                    const expr = rhs
-                        .replace(/%/g, ".*")
-                        .replace(/_/g, ".")
-                        .replace(/\\/g, "\\\\");
-                    const regex = new RegExp(`^${expr}$`);
-                    return (row) => regex.test(row[lhs]);
+                    return (row) => {
+                        const expr = rhs(row)
+                            .replace(/%/g, ".*")
+                            .replace(/_/g, ".")
+                            .replace(/\\/g, "\\\\");
+                        const regex = new RegExp(`^${expr}$`);
+                        return regex.test(lhs(row));
+                    };
                 }
                 case "IN": {
-                    return (row) => rhs.includes(row[lhs]);
+                    return (row) => {
+                        return (
+                            rhs(row)
+                            .map(r=>r())
+                            .includes(lhs(row))
+                        );
+                    };
                 }
                 case "=": {
                     return (row) => {
@@ -329,7 +420,7 @@ function evaluate(ast) {
             return () => ast.value;
         }
         case "expr_list": {
-            return ast.value.map(evaluate);
+            return () => ast.value.map(evaluate);
         }
         default:
             console.error("ERROR:", ast);
@@ -339,16 +430,28 @@ function evaluate(ast) {
 
 }
 
-//console.info(sql);
-//console.log(JSON.stringify(ast, null, 2));
 const test_queries = [
-    ["SELECT * FROM actors, users WHERE actors.fname = 'John'", ""],
-    //["SELECT * FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
-    //["SELECT * FROM actors, users", ""],
-    //"SELECT * FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'",
-    //"SELECT * FROM actors WHERE fname LIKE 'C%'",
-    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')",
-    //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname",
+    // simple queries and joins:
+    ["SELECT fname FROM actors", ""],
+    ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
+    ["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
+    ["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
+
+    // testing binary operators:
+    ["SELECT * FROM actors WHERE fname LIKE 'John'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'J%'", ""],
+    ["SELECT * FROM actors WHERE fname IN ('John', 'Jane')", ""],
+
+    //["SELECT * FROM actors WHERE fname IN ('John', actors.lname)", ""],
+
+    //NOTE!! Subqueries are not supported by the mysql grammar in node-sql-parser.
+    //See https://github.com/taozhi8833998/node-sql-parser/blob/master/pegjs/mysql.pegjs#L2584
+    //["SELECT fname FROM actors WHERE fname IN (SELECT `fname` FROM `actors` WHERE `fname` LIKE 'J%')", ""],
+
+    //["SELECT users.actorid, actors.id FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'C%'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname", ""],
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC",
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2",
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2, 3",
@@ -400,14 +503,12 @@ for (const [query, expected] of test_queries) {
 }
 
 
-// TODO - JOIN: 
-// SELECT Orders.CustomerID, Customers.CustomerID FROM Orders INNER JOIN Customers ON Orders.CustomerID <= Customers.CustomerID;
-// https://www.w3schools.com/sql/trysql.asp?filename=trysql_select_join_inner
-//
 // TODO - Select from multiple tables (kinda the same as an inner join where the "on" condition is always true)
 // SELECT count(*) FROM actors, users; (you'll get length of actors * length of users)
 //
 // TODO - subqueries NOTE: subqueries are not supported by the parser!
+// I created an issue here: https://github.com/taozhi8833998/node-sql-parser/issues/1430
+
 // TODO - GROUP BY
 // TODO - INSERT
 // TODO - UPDATE
