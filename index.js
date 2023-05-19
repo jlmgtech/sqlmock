@@ -105,61 +105,63 @@ const database = {
         {id: 0, name: null, fname: null, lname: null},
         {id: 1, name: "John Doe", fname: "John", lname: "Doe"},
         {id: 2, name: "Jane Doe", fname: "Jane", lname: "Doe"},
-        //{id: 3, fname: "John", lname: "Smith"},
-        //{id: 4, fname: "Jane", lname: "Smith"},
-        //{id: 5, fname: "Sarah", lname: "Connor"},
-        //{id: 6, fname: "John", lname: "Connor"},
-        //{id: 7, fname: "Peter", lname: "Parker"},
-        //{id: 8, fname: "Mary", lname: "Jane"},
-        //{id: 9, fname: "Tony", lname: "Stark"},
-        //{id: 10, fname: "Bruce", lname: "Wayne"},
-        //{id: 11, fname: "Clark", lname: "Kent"},
-        //{id: 12, fname: "Bruce", lname: "Banner"},
-        //{id: 13, fname: "Peter", lname: "Quill"},
-        //{id: 15, fname: "David", lname: "Hayter"},
-        //{id: 16, fname: "Hideo", lname: "Kojima"},
-        //{id: 17, fname: "Snake", lname: "Plissken"},
-        //{id: 18, fname: "Big", lname: "Boss"},
-        //{id: 19, fname: "John", lname: "Rambo"},
-        //{id: 20, fname: "John", lname: "McClane"},
-        //{id: 21, fname: "Thomas", lname: "Anderson"},
-        //{id: 22, fname: "John", lname: "Matrix"},
-        //{id: 23, fname: "John", lname: "Travolta"},
-        //{id: 24, fname: "Samuel", lname: "Jackson"},
-        //{id: 25, fname: "Bruce", lname: "Willis"},
-        //{id: 26, fname: "Arnold", lname: "Schwarzenegger"},
-        //{id: 27, fname: "Sylvester", lname: "Stallone"},
-        //{id: 28, fname: "Bruce", lname: "Lee"},
-        //{id: 29, fname: "Chuck", lname: "Norris"},
-        //{id: 30, fname: "Jean-Claude", lname: "Van Damme"},
-        //{id: 31, fname: "Steven", lname: "Seagal"},
-        //{id: 32, fname: "Jackie", lname: "Chan"},
-        //{id: 33, fname: "Jet", lname: "Li"},
-        //{id: 34, fname: "Keanu", lname: "Reeves"},
-        //{id: 35, fname: "Dolph", lname: "Lundgren"},
-        //{id: 36, fname: "Jason", lname: "Statham"},
-        //{id: 37, fname: "Vin", lname: "Diesel"},
-        //{id: 38, fname: "Paul", lname: "Walker"},
-        //{id: 39, fname: "Michelle", lname: "Rodriguez"},
-        //{id: 40, fname: "Charlize", lname: "Theron"},
-        //{id: 41, fname: "Uma", lname: "Thurman"},
-        //{id: 42, fname: "Dwayne", lname: "Johnson"},
-        //{id: 43, fname: "Zoe", lname: "Saldana"},
-        //{id: 44, fname: "Chris", lname: "Hemsworth"},
-        //{id: 45, fname: "Chris", lname: "Evans"},
-        //{id: 46, fname: "Scarlett", lname: "Johansson"},
-        //{id: 47, fname: "Robert", lname: "Downey Jr."},
-        //{id: 48, fname: "Chris", lname: "Pratt"},
-        //{id: 49, fname: "Bradley", lname: "Cooper"},
-        //{id: 50, fname: "Jennifer", lname: "Lawrence"},
-        //{id: 51, fname: "Benedict", lname: "Cumberbatch"},
-        //{id: 52, fname: "Tom", lname: "Holland"},
-        //{id: 53, fname: "Tom", lname: "Hardy"},
-        //{id: 54, fname: "Chadwick", lname: "Boseman"},
-        //{id: 55, fname: "Mark", lname: "Ruffalo"},
+        {id: 3, name: "John Smith", fname: "John", lname: "Smith"},
+        {id: 4, name: "Jane Smith", fname: "Jane", lname: "Smith"},
+        {id: 5, name: "Sarah Connor", fname: "Sarah", lname: "Connor"},
+        {id: 6, name: "John Connor", fname: "John", lname: "Connor"},
+        {id: 7, name: "Peter Parker", fname: "Peter", lname: "Parker"},
+        {id: 8, name: "Mary Jane", fname: "Mary", lname: "Jane"},
+        {id: 9, name: "Tony Stark", fname: "Tony", lname: "Stark"},
+        {id: 10, name: "Bruce Wayne", fname: "Bruce", lname: "Wayne"},
+        {id: 11, name: "Clark Kent", fname: "Clark", lname: "Kent"},
+        {id: 12, name: "Bruce Banner", fname: "Bruce", lname: "Banner"},
+        //{id: 13, name: "Peter Quill", fname: "Peter", lname: "Quill"},
+        //{id: 15, name: "David Hayter", fname: "David", lname: "Hayter"},
+        //{id: 16, name: "Hideo Kojima", fname: "Hideo", lname: "Kojima"},
+        //{id: 17, name: "Snake Plissken", fname: "Snake", lname: "Plissken"},
+        //{id: 18, name: "Big Boss", fname: "Big", lname: "Boss"},
+        //{id: 19, name: "John Rambo", fname: "John", lname: "Rambo"},
+        //{id: 20, name: "John McClane", fname: "John", lname: "McClane"},
+        //{id: 21, name: "Thomas Anderson", fname: "Thomas", lname: "Anderson"},
+        //{id: 22, name: "John Matrix", fname: "John", lname: "Matrix"},
+        //{id: 23, name: "John Travolta", fname: "John", lname: "Travolta"},
+        //{id: 24, name: "Samuel Jackson", fname: "Samuel", lname: "Jackson"},
+        //{id: 25, name: "Bruce Willis", fname: "Bruce", lname: "Willis"},
+        //{id: 26, name: "Arnold Schwarzenegger", fname: "Arnold", lname: "Schwarzenegger"},
+        //{id: 27, name: "Sylvester Stallone", fname: "Sylvester", lname: "Stallone"},
+        //{id: 28, name: "Bruce Lee", fname: "Bruce", lname: "Lee"},
+        //{id: 29, name: "Chuck Norris", fname: "Chuck", lname: "Norris"},
+        //{id: 30, name: "Jean-Claude Van Damme", fname: "Jean-Claude", lname: "Van Damme"},
+        //{id: 31, name: "Steven Seagal", fname: "Steven", lname: "Seagal"},
+        //{id: 32, name: "Jackie Chan", fname: "Jackie", lname: "Chan"},
+        //{id: 33, name: "Jet Li", fname: "Jet", lname: "Li"},
+        //{id: 34, name: "Keanu Reeves", fname: "Keanu", lname: "Reeves"},
+        //{id: 35, name: "Dolph Lundgren", fname: "Dolph", lname: "Lundgren"},
+        //{id: 36, name: "Jason Statham", fname: "Jason", lname: "Statham"},
+        //{id: 37, name: "Vin Diesel", fname: "Vin", lname: "Diesel"},
+        //{id: 38, name: "Paul Walker", fname: "Paul", lname: "Walker"},
+        //{id: 39, name: "Michelle Rodriguez", fname: "Michelle", lname: "Rodriguez"},
+        //{id: 40, name: "Charlize Theron", fname: "Charlize", lname: "Theron"},
+        //{id: 41, name: "Uma Thurman", fname: "Uma", lname: "Thurman"},
+        //{id: 42, name: "Dwayne Johnson", fname: "Dwayne", lname: "Johnson"},
+        //{id: 43, name: "Zoe Saldana", fname: "Zoe", lname: "Saldana"},
+        //{id: 44, name: "Chris Hemsworth", fname: "Chris", lname: "Hemsworth"},
+        //{id: 45, name: "Chris Evans", fname: "Chris", lname: "Evans"},
+        //{id: 46, name: "Scarlett Johansson", fname: "Scarlett", lname: "Johansson"},
+        //{id: 47, name: "Robert Downey Jr.", fname: "Robert", lname: "Downey Jr."},
+        //{id: 48, name: "Chris Pratt", fname: "Chris", lname: "Pratt"},
+        //{id: 49, name: "Bradley Cooper", fname: "Bradley", lname: "Cooper"},
+        //{id: 50, name: "Jennifer Lawrence", fname: "Jennifer", lname: "Lawrence"},
+        //{id: 51, name: "Benedict Cumberbatch", fname: "Benedict", lname: "Cumberbatch"},
+        //{id: 52, name: "Tom Holland", fname: "Tom", lname: "Holland"},
+        //{id: 53, name: "Tom Hardy", fname: "Tom", lname: "Hardy"},
+        //{id: 54, name: "Chadwick Boseman", fname: "Chadwick", lname: "Boseman"},
+        //{id: 55, name: "Mark Ruffalo", fname: "Mark", lname: "Ruffalo"},
     ]
 };
 
+
+let FROM_TABLES = [];
 
 function evaluate(ast) {
     if (!ast) {
@@ -170,6 +172,7 @@ function evaluate(ast) {
 
         case "select": {
             const from_tables = ast.from.map(f => f.table);
+            FROM_TABLES = from_tables;
             const filter = evaluate(ast.where);
             const offset = null; // TODO
             const map    = ast.columns === "*" ?
@@ -207,8 +210,15 @@ function evaluate(ast) {
                 return newrec;
             };
 
-            // TODO - order by needs to respect that there are multiple table spaces per record:
-            const orderby = ast.orderby ? ast.orderby.map(evaluate)[0] : null;
+            // TODO - order by needs to respect that there are records from multiple tables in each row:
+            //const ast_order_by = [
+            //    {
+            //        expr: { type: 'column_ref', table: '', column: 'fname' },
+            //        type: 'ASC'
+            //    }
+            //];
+
+            const orderby = ast.orderby ? ast.orderby.map(evaluate) : null;
 
             const limit   = ast.limit ? ast.limit.map(evaluate) : null;
 
@@ -231,7 +241,11 @@ function evaluate(ast) {
                 }
                 if (orderby) {
                     console.log("ORDER BY: ", orderby.toString());
-                    joined = joined.sort(orderby);
+                    let sorter;
+                    while (sorter = orderby.pop()) {
+                        const sort = sorter();
+                        joined = joined.sort(sort);
+                    }
                 }
                 if (offset) {
                     joined = joined.slice(...limit);
@@ -409,8 +423,12 @@ function evaluate(ast) {
         }
         case "ASC": {
             // return sorting comparator; only one column supported for now
-            const column = evaluate(ast.expr);
-            return (a, b) => a[column] < b[column] ? -1 : 1;
+            //const column = evaluate(ast.expr);
+            if (!ast.expr.table && FROM_TABLES.length > 1) {
+                throw new Error(`Cannot ORDER BY ambiguous table '${ast.expr.table}'`);
+            }
+            const table = ast.expr.table || FROM_TABLES[0];
+            return row => (a, b) => a[table][ast.expr.column] < b[table][ast.expr.column] ? -1 : 1;
         }
         case "DESC": {
             const column = evaluate(ast.expr);
@@ -432,15 +450,15 @@ function evaluate(ast) {
 
 const test_queries = [
     // simple queries and joins:
-    ["SELECT fname FROM actors", ""],
-    ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
-    ["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
-    ["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
+    //["SELECT fname FROM actors", ""],
+    //["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
+    //["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
+    //["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
 
     // testing binary operators:
-    ["SELECT * FROM actors WHERE fname LIKE 'John'", ""],
-    ["SELECT * FROM actors WHERE fname LIKE 'J%'", ""],
-    ["SELECT * FROM actors WHERE fname IN ('John', 'Jane')", ""],
+    //["SELECT * FROM actors WHERE fname LIKE 'John'", ""],
+    //["SELECT * FROM actors WHERE fname LIKE 'J%'", ""],
+    //["SELECT * FROM actors WHERE fname IN ('John', 'Jane')", ""],
 
     //["SELECT * FROM actors WHERE fname IN ('John', actors.lname)", ""],
 
@@ -449,9 +467,9 @@ const test_queries = [
     //["SELECT fname FROM actors WHERE fname IN (SELECT `fname` FROM `actors` WHERE `fname` LIKE 'J%')", ""],
 
     //["SELECT users.actorid, actors.id FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'", ""],
-    ["SELECT * FROM actors WHERE fname LIKE 'C%'", ""],
-    ["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')", ""],
-    ["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname", ""],
+    //["SELECT * FROM actors WHERE fname LIKE 'C%'", ""],
+    //["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')", ""],
+    ["SELECT fname, lname FROM actors WHERE fname ORDER BY fname, lname", ""],
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC",
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2",
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2, 3",
