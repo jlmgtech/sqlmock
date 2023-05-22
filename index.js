@@ -1,5 +1,6 @@
-const {parse, stringify} = require("node-sqlparser");
+const {Parser} = require("node-sql-parser/build/mysql");
 const md5 = require('md5');
+const parser = new Parser();
 
 // NEXT TODO: order by 2023-05-19
 
@@ -354,7 +355,7 @@ function evaluate(ast) {
                     return (row) => {
                         return (
                             rhs(row)
-                            .map(r=>r())
+                            .map(r=>r(row))
                             .includes(lhs(row))
                         );
                     };
@@ -407,6 +408,7 @@ function evaluate(ast) {
 
         case "column_ref": {
             return (row) => {
+                if (!row) throw new Error("row is undefined");
                 if (!ast.table && Object.keys(row).length > 1) {
                     throw new Error(
                         `Ambiguous column reference "${ast.column}"; if you are ` +
@@ -419,7 +421,7 @@ function evaluate(ast) {
         }
 
         case "string": {
-            return () => ast.value;
+            return (row) => ast.value;
         }
         case "ASC": {
             // return sorting comparator; only one column supported for now
@@ -440,9 +442,17 @@ function evaluate(ast) {
         case "expr_list": {
             return () => ast.value.map(evaluate);
         }
+        case "single_quote_string": {
+            return () => ast.value;
+        }
         default:
-            console.error("ERROR:", ast);
-            throw new Error(`"${ast.type}" is not implemented`);
+            if (!ast.type && ast.ast) {
+                // probably a select statement:
+                return evaluate(ast.ast);
+            } else {
+                console.error("ERROR:", ast);
+                throw new Error(`"${ast.type}" is not implemented`);
+            }
 
     }
 
@@ -450,25 +460,25 @@ function evaluate(ast) {
 
 const test_queries = [
     // simple queries and joins:
-    //["SELECT fname FROM actors", ""],
-    //["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
-    //["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
-    //["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
+    ["SELECT fname FROM actors", ""],
+    ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
+    ["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
+    ["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
 
-    // testing binary operators:
-    //["SELECT * FROM actors WHERE fname LIKE 'John'", ""],
-    //["SELECT * FROM actors WHERE fname LIKE 'J%'", ""],
-    //["SELECT * FROM actors WHERE fname IN ('John', 'Jane')", ""],
+    //// testing binary operators:
+    ["SELECT * FROM actors WHERE fname LIKE 'John'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'J%'", ""],
+    ["SELECT * FROM actors WHERE fname IN ('John', 'Jane')", ""],
 
-    //["SELECT * FROM actors WHERE fname IN ('John', actors.lname)", ""],
+    ["SELECT * FROM actors WHERE fname IN ('John', actors.lname)", ""],
 
-    //NOTE!! Subqueries are not supported by the mysql grammar in node-sql-parser.
-    //See https://github.com/taozhi8833998/node-sql-parser/blob/master/pegjs/mysql.pegjs#L2584
-    //["SELECT fname FROM actors WHERE fname IN (SELECT `fname` FROM `actors` WHERE `fname` LIKE 'J%')", ""],
+    ////Subqueries are now supported, but we need to reorganize the data that
+    //comes back from processing a select statement.
+    //["SELECT fname FROM actors WHERE fname IN (SELECT `fname` FROM `actors`)", ""],
 
-    //["SELECT users.actorid, actors.id FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'", ""],
-    //["SELECT * FROM actors WHERE fname LIKE 'C%'", ""],
-    //["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')", ""],
+    ["SELECT users.actorid, actors.id FROM actors JOIN users on users.actorid = actors.id WHERE actors.fname LIKE '%'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'C%'", ""],
+    ["SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith')", ""],
     ["SELECT fname, lname FROM actors WHERE fname ORDER BY fname, lname", ""],
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC",
     //"SELECT * FROM actors WHERE fname LIKE 'J%' AND lname IN('Doe', 'Smith') ORDER BY fname DESC LIMIT 2",
@@ -502,7 +512,7 @@ const test_queries = [
 ];
 
 for (const [query, expected] of test_queries) {
-    const ast = parse(query);
+    const ast = parser.astify(query);
     const strategy = evaluate(ast);
     const result = strategy();
     const checksum = md5(JSON.stringify(result));
