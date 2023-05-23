@@ -270,6 +270,10 @@ function cartesian(tables) {
 
     const output = [];
     for (const [table, data] of Object.entries(tables)) {
+        if (!data) {
+            console.trace();
+            process.exit(0);
+        }
         if (output.length === 0) {
             for (const row of data) {
                 output.push({[table]: row});

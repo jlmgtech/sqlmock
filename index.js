@@ -1,13 +1,38 @@
-// TODO - actually RUN a server here.
-//
+const runsql = require("./runsql.js");
+const fs = require("fs");
+const express = require("express");
+const app = express();
+const PORT = 2069;
+
+// TODO - SELECT 1 should work as a hello world
+// Run the server (node .)
+// Then curl "http://127.0.0.1/query/SELECT%201/
+
+// load the database file:
+const db = JSON.parse(fs.readFileSync("./database.json", {encoding:"utf-8"}));
+
+// now listen for requests
+app.get("/query/:query", (request, response) => {
+    const sql = request.params.query;
+    console.log(sql);
+    // TODO - actually run the sql now against the database:
+    response.end(runsql(sql, db));
+});
+
+app.listen(PORT, () => {
+    console.log("SQL Mock Server Listening (port %d)", PORT);
+    console.log("use: GET /query/<query_string>");
+});
+
+
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
-// TODO - Select from multiple tables (kinda the same as an inner join where the "on" condition is always true)
-// SELECT count(*) FROM actors, users; (you'll get length of actors * length of users)
-//
-// TODO - subqueries NOTE: subqueries are not supported by the parser!
-// I created an issue here: https://github.com/taozhi8833998/node-sql-parser/issues/1430
+// TODO - subqueries 
+// Subqueries are used only within "IN" expressions, which means that the
+// result of a select statement executed within should yield the same type of
+// list as an expr list e.g. `(1, 2, 3)`. You will just need to write some
+// custom handling to accomodate that.
 
 // TODO - GROUP BY
 // TODO - INSERT
