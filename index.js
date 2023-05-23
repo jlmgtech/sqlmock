@@ -1,12 +1,10 @@
-const runsql = require("./runsql.js");
+const runsql = require("./src/runsql.js");
 const fs = require("fs");
 const express = require("express");
 const app = express();
 const PORT = 2069;
 
-// TODO - SELECT 1 should work as a hello world
-// Run the server (node .)
-// Then curl "http://127.0.0.1/query/SELECT%201/
+// curl "http://127.0.0.1/query/SELECT%20name%20FROM%20users/
 
 // load the database file:
 const db = JSON.parse(fs.readFileSync("./database.json", {encoding:"utf-8"}));
@@ -46,12 +44,6 @@ app.listen(PORT, () => {
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
-// TODO - subqueries 
-// Subqueries are used only within "IN" expressions, which means that the
-// result of a select statement executed within should yield the same type of
-// list as an expr list e.g. `(1, 2, 3)`. You will just need to write some
-// custom handling to accomodate that.
-
 // TODO - GROUP BY
 // TODO - INSERT
 // TODO - UPDATE
@@ -68,3 +60,8 @@ app.listen(PORT, () => {
 // TODO - DROP SCHEMA
 // TODO - REPLACE
 // TODO - SHOW
+// TODO - subqueries 
+// Subqueries are used only within "IN" expressions, which means that the
+// result of a select statement executed within should yield the same type of
+// list as an expr list e.g. `(1, 2, 3)`. You will just need to write some
+// custom handling to accomodate that.
