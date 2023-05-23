@@ -1,5 +1,25 @@
 {
 
+    "__schema__": {
+        "users": {
+            "id": "number",
+            "actorid": "number",
+            "name": "string"
+        },
+
+        "actors": {
+            "id": "number",
+            "fname": "string",
+            "lname": "string",
+            "name": "string"
+        },
+
+        "silos": {
+            "id": "number",
+            "name": "string"
+        }
+    },
+
     "levels": [
         { "id": 0, "uid": 0, "level": "The Desert"},
         { "id": 1, "uid": 1, "level": "Forest of the Dead"},

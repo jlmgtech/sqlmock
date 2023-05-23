@@ -1,7 +1,11 @@
 
 let FROM_TABLES = [];
 function evaluate(database) {
+
     return ast => {
+        if (typeof ast !== "object") {
+            throw new Error("evaluate: ast must be a valid ast object");
+        }
 
         if (!ast) {
             return null;
@@ -10,13 +14,14 @@ function evaluate(database) {
         switch (ast.type) {
 
             case "select": {
-                const from_tables = ast.from.map(f => f.table);
+
+                const from_tables = ast.from?.map(f => f.table) ?? [];
                 FROM_TABLES = from_tables;
                 const filter = evaluate(database)(ast.where);
                 // TODO - ON filter also!
 
                 const offset = null; // TODO
-                const map    = ast.columns === "*" ?
+                const output_columns = ast.columns === "*" ?
                 (a => a) :
                 (record) => {
                     // we want to whitelist only the selected columns
@@ -32,19 +37,27 @@ function evaluate(database) {
                         const type = col.expr?.type ?? "";
                         const cname = col.expr?.column ?? "";
                         const column_table = col.expr?.table ?? "";
+
+                        // do checking to make sure columns are legit:
                         if (from_tables.length > 1 && !column_table) {
                             throw new Error(
                                 `Ambiguous column '${cname}' when using ` +
                                 "multiple tables."
                             );
                         }
+
                         const tname = column_table || from_tables[0];
                         if (type === "column_ref") {
                             // just copy over the column from the respective table
                             // in the old record
                             newrec[tname] = newrec[tname] || {};
                             const asname = as || cname;
-                            newrec[tname][asname] = record[tname][cname];
+                            otherval = record[tname][cname];
+                            newrec[tname][asname] = otherval;
+                        } else {
+                            console.log(type);
+                            const asname = as || type;
+                            newrec[tname][asname] = evaluate(database)(type);
                         }
                     }
 
@@ -67,6 +80,10 @@ function evaluate(database) {
 
                     // performing a cross join of the relevant tables:
                     // get relevant tables:
+                    if (!from_tables || from_tables.length === 0) {
+                        throw new Error("Selecting an anonymous expression is not supported (e.g. SELECT 1;)");
+                    }
+
                     const data = {};
                     for (const tname of from_tables) {
                         data[tname] = database[tname];
@@ -80,7 +97,6 @@ function evaluate(database) {
                         joined = joined.filter(filter);
                     }
                     if (orderby) {
-                        console.log("ORDER BY: ", orderby.toString());
                         let sorter;
                         while (sorter = orderby.pop()) {
                             const sort = sorter();
@@ -94,8 +110,8 @@ function evaluate(database) {
                         joined = joined.slice(0, ...limit);
                     }
 
-                    // now filter the columns:
-                    joined = joined.map(map);
+                    // remove any columns that weren't "selected":
+                    joined = joined.map(output_columns);
 
                     // combine tables into single output object:
                     // BUT! Throw an error if there are any duplicate column names
@@ -205,7 +221,7 @@ function evaluate(database) {
             }
 
             case "column_ref": {
-                return (row) => {
+                return (row, setvalue) => {
                     if (!row) throw new Error("row is undefined");
                     if (!ast.table && Object.keys(row).length > 1) {
                         throw new Error(
@@ -245,7 +261,68 @@ function evaluate(database) {
             }
             default:
                 if (!ast.type && ast.ast) {
-                    // probably a select statement:
+
+                    // This is a top-level statement:
+                    // check that the columns and tables etc exist against the schema!
+                    FROM_TABLES = [];
+                    const schema = database.__schema__;
+
+
+                    // check that the tables ACTUALLY EXIST in the schema:
+                    for (const tab of ast.tableList) {
+                        const [op, dbname, tname] = tab.split(/::/g);
+                        if (typeof schema[tname] === "undefined") {
+                            throw new Error(`table '${tname}' doesn't exist!`);
+                        }
+                        if (tname === "__schema__") {
+                            throw new Error("__schema__ is not a valid table name!");
+                        }
+                        FROM_TABLES.push(tname);
+                    }
+
+                    // make sure the columns ACTUALLY EXIST in the schema:
+                    for (const col of ast.columnList) {
+                        const [op, table, cname] = col.split(/::/g);
+                        let tname = table;
+                        if (tname === "null") {
+                            tname = null;
+                            // find the table this is supposed to be in!
+                            for (const fromtable of FROM_TABLES) {
+                                if (typeof schema[fromtable][cname] !== "undefined") {
+                                    if (tname !== null) {
+                                        throw new Error(
+                                            `column '${cname}' is ambiguous af ` +
+                                            `(could be in '${tname}' or '${fromtable}')`
+                                        );
+                                    }
+                                    tname = fromtable;
+                                }
+                            }
+
+                            if (tname === null) {
+                                if (FROM_TABLES.length === 1) {
+                                    throw new Error(
+                                        `table '${FROM_TABLES[0]}' has no ` +
+                                        `column named '${cname}'`
+                                    );
+                                } else {
+                                    throw new Error(
+                                        'None of the tables ' +
+                                        `(${FROM_TABLES.join(', ')}) have a ` +
+                                        `column named "${cname}".`
+                                    );
+                                }
+                            }
+                        }
+
+                        if (typeof schema[tname][cname] === "undefined") {
+                            throw new Error(
+                                `column '${cname}' doesn't exist in ` +
+                                `schema for table '${table}'`
+                            );
+                        }
+                    }
+
                     return evaluate(database)(ast.ast);
                 } else {
                     console.error("ERROR:", ast);

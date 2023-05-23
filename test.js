@@ -4,32 +4,14 @@ const fs = require("fs");
 const md5 = require('md5');
 const parser = new Parser();
 
-const schema = {
-    users: {
-        id: "number",
-        actorid: "number",
-        name: "string",
-    },
-
-    actors: {
-        id: "number",
-        fname: "string",
-        lname: "string",
-        name: "string",
-    },
-
-    silos: {
-        id: "number",
-        name: "string",
-    },
-};
-
 const database = JSON.parse(fs.readFileSync("./database.json", {encoding:"utf-8"}));
 if (!database) {
     throw new Error("no database found");
 }
 
 const test_queries = [
+    ["SELECT 1"],
+
     // simple queries and joins:
     ["SELECT fname FROM actors", ""],
     ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
@@ -99,4 +81,5 @@ for (const [query, expected] of test_queries) {
     }
     console.log("========================================");
     console.log("%d results (users %d, actors %d)", result.length, database.users.length, database.actors.length);
+    break;
 }

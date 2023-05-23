@@ -11,12 +11,30 @@ const PORT = 2069;
 // load the database file:
 const db = JSON.parse(fs.readFileSync("./database.json", {encoding:"utf-8"}));
 
+
+const jsonErrorHandler = (err, req, res, next) => {
+    res.status(500).json({ error: err });
+}
+
+//app.use(bodyParser.json());
+app.use(jsonErrorHandler);
+
 // now listen for requests
 app.get("/query/:query", (request, response) => {
-    const sql = request.params.query;
-    console.log(sql);
-    // TODO - actually run the sql now against the database:
-    response.end(runsql(sql, db));
+    try {
+        const sql = request.params.query;
+        const result = runsql(sql, db);
+        console.log("result: ", result)
+        response.json({
+            type: "result",
+            result
+        });
+    } catch(e) {
+        response.json({
+            type: "error",
+            message: `${e}`,
+        });
+    }
 });
 
 app.listen(PORT, () => {
@@ -24,6 +42,11 @@ app.listen(PORT, () => {
     console.log("use: GET /query/<query_string>");
 });
 
+
+const sql = "SELECT name FROM users";
+console.log(db.__schema__);
+const result = runsql(sql, db);
+console.log("result: ", result)
 
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
