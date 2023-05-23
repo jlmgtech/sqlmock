@@ -43,11 +43,6 @@ app.listen(PORT, () => {
 });
 
 
-const sql = "SELECT name FROM users";
-console.log(db.__schema__);
-const result = runsql(sql, db);
-console.log("result: ", result)
-
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
