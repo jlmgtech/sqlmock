@@ -1,5 +1,5 @@
 const {Parser} = require("node-sql-parser/build/mysql");
-const evaluate = require("./evaluate.js");
+const evaluate = require("../evaluate.js");
 const fs = require("fs");
 const md5 = require('md5');
 const parser = new Parser();
