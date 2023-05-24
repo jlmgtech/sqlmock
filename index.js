@@ -44,8 +44,8 @@ app.listen(PORT, () => {
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
-// TODO - GROUP BY
 // TODO - INSERT
+// TODO - GROUP BY
 // TODO - UPDATE
 // TODO - DELETE
 // TODO - CREATE TABLE
