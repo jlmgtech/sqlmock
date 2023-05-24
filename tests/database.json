@@ -1,22 +1,23 @@
 {
 
     "__schema__": {
+
         "users": {
-            "id": "number",
-            "actorid": "number",
-            "name": "string"
+            "id":      {"type": "number", "not_null": true, "auto_increment": true},
+            "actorid": {"type": "number", "not_null": true},
+            "name":    {"type": "string", "not_null": true}
         },
 
         "actors": {
-            "id": "number",
-            "fname": "string",
-            "lname": "string",
-            "name": "string"
+            "id":    {"type": "number", "not_null": true, "auto_increment": true},
+            "fname": {"type": "string", "not_null": true},
+            "lname": {"type": "string", "not_null": true},
+            "name":  {"type": "string", "not_null": true}
         },
 
         "silos": {
-            "id": "number",
-            "name": "string"
+            "id":   {"type": "number", "not_null": true, "auto_increment": true},
+            "name": {"type": "string", "not_null": true}
         }
     },
 

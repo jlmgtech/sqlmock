@@ -13,7 +13,8 @@ const test_queries = [
 
     // this one should check the schema and make sure that the table exists, the columns exist in the table, and 
     // that the types of the columns are correct. Also, it should enforce constraints.
-    ["INSERT INTO users(id, actorid, name) VALUES(50, 1, 'test')", ""],
+    ["INSERT INTO users(actorid, name) VALUES(1, 'test')", ""],
+    ["SELECT * FROM users WHERE name = 'test'", ""],
 
     //next, you should be able to auto-increment the primary key:
     //["INSERT INTO users(actorid, name) VALUES(1, 'test')", ""],
@@ -89,5 +90,4 @@ for (const [query, expected] of test_queries) {
     }
     console.log("========================================");
     console.log("%d results (users %d, actors %d)", result.length, database.users.length, database.actors.length);
-    break;
 }
