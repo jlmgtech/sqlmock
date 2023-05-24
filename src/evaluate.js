@@ -1,5 +1,9 @@
+const cartesian = require("./cartesian.js");
+const evaluate_insert = require("./evaluate_insert.js");
+const evaluate_update = require("./evaluate_update.js");
+const evaluate_binary_expr = require("./evaluate_binary_expr.js");
+const {GET_FROM_TABLES, SET_FROM_TABLES} = require("./from_tables.js");
 
-let FROM_TABLES = [];
 function evaluate(database) {
 
     return ast => {
@@ -15,13 +19,19 @@ function evaluate(database) {
         switch (ast.type) {
 
             case "insert":
-                return evaluateInsert(database, ast);
+                return evaluate_insert(database, ast);
+
+            case "update":
+                return evaluate_update(evaluate, database, ast);
+
+            case "delete":
+                throw new Error("DELETE not yet implemented");
 
             case "select": {
 
                 const from_tables = ast.from?.map(f => f.table) ?? [];
-                FROM_TABLES = from_tables;
-                const filter = evaluate(database)(ast.where);
+                SET_FROM_TABLES(from_tables);
+                const whereFilter = evaluate(database)(ast.where);
                 // TODO - ON filter also!
 
                 const offset = null; // TODO
@@ -96,9 +106,9 @@ function evaluate(database) {
                     // perform join:
                     let joined = cartesian(data);
 
-                    if (filter) {
+                    if (whereFilter) {
                         // filtering using "where" AND "on":
-                        joined = joined.filter(filter);
+                        joined = joined.filter(whereFilter);
                     }
                     if (orderby) {
                         let sorter;
@@ -146,94 +156,21 @@ function evaluate(database) {
                 return null;
             }
 
-            case "binary_expr": {
-
-                const lhs = evaluate(database)(ast.left);
-                if (typeof lhs !== "function") {
-                    throw new TypeError(`lhs needs to be a function for '${ast.left.type}' node`);
-                }
-
-                const rhs = evaluate(database)(ast.right);
-                if (typeof rhs !== "function") {
-                    throw new TypeError(`rhs needs to be a function for '${ast.right.type}' node`);
-                }
-
-                switch (ast.operator) {
-                    case "LIKE": {
-                        return (row) => {
-                            const expr = rhs(row)
-                                .replace(/%/g, ".*")
-                                .replace(/_/g, ".")
-                                .replace(/\\/g, "\\\\");
-                            const regex = new RegExp(`^${expr}$`);
-                            return regex.test(lhs(row));
-                        };
-                    }
-                    case "IN": {
-                        return (row) => {
-                            return (
-                                rhs(row)
-                                .map(r=>r(row))
-                                .includes(lhs(row))
-                            );
-                        };
-                    }
-                    case "=": {
-                        return (row) => {
-                            // determine table name of column
-                            // if not provided.
-                            // row looks like {
-                            //  users: {id: 1, name: "John Doe"},
-                            //  actors: {id: 1, fname: "John", lname: "Doe"}
-                            // }
-                            return lhs(row) == rhs(row);
-                            //row[lhs] == rhs;
-                        };
-                    }
-                    case "IS": {
-                        if (rhs === null) {
-                            return (row) => row[lhs] == null;
-                        } else {
-                            return (row) => row[lhs] === rhs;
-                        }
-                    }
-                    case "<>":
-                    case "!=": {
-                        return (row) => row[lhs] != rhs;
-                    }
-                    case ">": {
-                        return (row) => row[lhs] > rhs;
-                    }
-                    case ">=": {
-                        return (row) => row[lhs] >= rhs;
-                    }
-                    case "<": {
-                        return (row) => row[lhs] < rhs;
-                    }
-                    case "<=": {
-                        return (row) => row[lhs] <= rhs;
-                    }
-                    case "AND": {
-                        return (row) => lhs(row) && rhs(row);
-                    }
-                    case "OR": {
-                        return (row) => lhs(row) || rhs(row);
-                    }
-                    default:
-                        throw new Error(`Unsupported operator: "${ast.operator}"`);
-                }
-            }
+            case "binary_expr":
+                return evaluate_binary_expr(evaluate(database), ast);
 
             case "column_ref": {
                 return (row, setvalue) => {
                     if (!row) throw new Error("row is undefined");
-                    if (!ast.table && Object.keys(row).length > 1) {
+                    if (!ast.table && GET_FROM_TABLES().length > 1) {
+                        console.log(ast.table);
+                        console.log(Object.keys(row));
                         throw new Error(
                             `Ambiguous column reference "${ast.column}"; if you are ` +
                             "using multiple tables, you must specify the table name."
                         );
                     }
-                    const table = ast.table || Object.keys(row)[0];
+                    const table = ast.table || GET_FROM_TABLES()[0];
                     return row[table][ast.column];
                 };
             }
@@ -241,34 +178,40 @@ function evaluate(database) {
             case "string": {
                 return (row) => ast.value;
             }
+
             case "ASC": {
                 // return sorting comparator; only one column supported for now
                 //const column = evaluate(database)(ast.expr);
-                if (!ast.expr.table && FROM_TABLES.length > 1) {
+                if (!ast.expr.table && GET_FROM_TABLES().length > 1) {
                     throw new Error(`Cannot ORDER BY ambiguous table '${ast.expr.table}'`);
                 }
-                const table = ast.expr.table || FROM_TABLES[0];
+                const table = ast.expr.table || GET_FROM_TABLES()[0];
                 return row => (a, b) => a[table][ast.expr.column] < b[table][ast.expr.column] ? -1 : 1;
             }
+
             case "DESC": {
                 const column = evaluate(database)(ast.expr);
                 return (a, b) => a[column] > b[column] ? -1 : 1;
             }
+
             case "number": {
                 return () => ast.value;
             }
+
             case "expr_list": {
                 return () => ast.value.map(evaluate(database));
             }
+
             case "single_quote_string": {
                 return () => ast.value;
             }
+
             default:
                 if (!ast.type && ast.ast) {
 
                     // This is a top-level statement:
                     // check that the columns and tables etc exist against the schema!
-                    FROM_TABLES = [];
+                    SET_FROM_TABLES([]);
                     const schema = database.__schema__;
 
 
@@ -281,7 +224,7 @@ function evaluate(database) {
                         if (tname === "__schema__") {
                             throw new Error("__schema__ is not a valid table name!");
                         }
-                        FROM_TABLES.push(tname);
+                        SET_FROM_TABLES([...GET_FROM_TABLES(), tname]);
                     }
 
                     // make sure the columns ACTUALLY EXIST in the schema:
@@ -291,7 +234,7 @@ function evaluate(database) {
                         if (tname === "null") {
                             tname = null;
                             // find the table this is supposed to be in!
-                            for (const fromtable of FROM_TABLES) {
+                            for (const fromtable of GET_FROM_TABLES()) {
                                 if (typeof schema[fromtable][cname] !== "undefined") {
                                     if (tname !== null) {
                                         throw new Error(
@@ -304,15 +247,15 @@ function evaluate(database) {
                             }
 
                             if (tname === null) {
-                                if (FROM_TABLES.length === 1) {
+                                if (GET_FROM_TABLES().length === 1) {
                                     throw new Error(
-                                        `table '${FROM_TABLES[0]}' has no ` +
+                                        `table '${GET_FROM_TABLES()[0]}' has no ` +
                                         `column named '${cname}'`
                                     );
                                 } else {
                                     throw new Error(
                                         'None of the tables ' +
-                                        `(${FROM_TABLES.join(', ')}) have a ` +
+                                        `(${GET_FROM_TABLES().join(', ')}) have a ` +
                                         `column named "${cname}".`
                                     );
                                 }
@@ -336,159 +279,6 @@ function evaluate(database) {
         }
 
     };
-}
-
-function cartesian(tables) {
-    // perform cartesian product of all tables
-    // https://stackoverflow.com/a/43053803/1123955
-    // Tables is an object with keys as table names
-    // and values as a collection of rows. It can specify 1 or more tables.
-    // e.g. { "table1": [ { "id": 1, "name": "foo" }, ... ], ... }
-    // We want to a cartesian product of all the rows
-    // e.g. [ {"table1": {...table1row}, "table2": {...table2row}}, ... ]
-    // use for loops instead of map/filter/reduce for performance reasons.
-
-
-    const output = [];
-    for (const [table, data] of Object.entries(tables)) {
-        if (!data) {
-            console.trace();
-            process.exit(0);
-        }
-        if (output.length === 0) {
-            for (const row of data) {
-                output.push({[table]: row});
-            }
-        } else {
-            const newOutput = [];
-            for (const row of data) {
-                for (const outputRow of output) {
-                    newOutput.push({...outputRow, [table]: row});
-                }
-            }
-            output.length = 0;
-            output.push(...newOutput);
-        }
-    }
-    return output;
-
-}
-
-function evaluateInsert(database, ast) {
-
-    return () => {
-
-        // 1st, check for unsupported features:
-        if (ast.table.length !== 1) {
-            throw new Error("INSERT statements must have exactly ONE table.");
-        }
-        if (ast.table[0].as) {
-            throw new Error("INSERT statement cannot have an alias.");
-        }
-        if (ast.partition !== null) {
-            throw new Error("INSERT statement cannot have a PARTITION clause.");
-        }
-        if (ast.prefix != "into") {
-            throw new Error(
-                `INSERT statement does not support ${ast.prefix} ` +
-                `clause, only INTO.`
-            );
-        }
-        if (ast.on_duplicate_update) {
-            throw new Error("INSERT statement does not support ON DUPLICATE UPDATE.");
-        }
-
-        const schema = database.__schema__;
-        const tname = ast.table[0].table;
-
-        // 2nd, check that the table exists:
-        if (typeof schema[tname] === undefined) {
-            throw new Error(`Cannot INSERT into unknown table '${tname}'`);
-        }
-
-        // 3rd, check that the columns exist in that table:
-        for (const col of ast.columns) {
-            // check database.__schema__
-            if (typeof schema[tname][col] === undefined) {
-                throw new Error(`INSERT into unknown column '${col}' in table '${tname}'`);
-            }
-        }
-        if (ast.values.length !== 1) {
-            throw new Error("INSERT statements must have exactly ONE set of values.");
-        }
-        const vals = ast.values[0].value.map(e => e.value);
-        if (vals.length !== ast.values[0].value.length) {
-            throw new Error("INSERT number of values must match the number of columns.");
-        }
-
-        // 4th, check that the values are the correct type, and build the row:
-        const insert_row = {};
-        for (let i = 0; i < vals.length; i++) {
-            const val = vals[i];
-            const col = ast.columns[i];
-
-            // check the type match in the schema:
-            if (schema[tname][col].type !== typeof val) {
-                throw new Error(
-                    `INSERT value for column '${col}' in table '${tname}' ` +
-                    `is type '${typeof val}' but should be '${schema[tname][col].type}'`
-                );
-            }
-
-            // update the insert row
-            insert_row[col] = val;
-        }
-
-        // finally, check constraints:
-        // TODO: check constraints
-        // ERS only really uses and therefore supports NOT NULL constraints.
-        for (const col of Object.keys(schema[tname])) {
-
-            // make sure auto_increment fields are numbers:
-            if (schema[tname][col].auto_increment) {
-
-                if (schema[tname][col].type !== "number") {
-                    throw new Error(
-                        `INSERT failed because column '${col}' in table '${tname}' ` +
-                        `is an auto_increment column but is not a number`
-                    );
-                }
-
-                // make sure they're not specifying a value for an auto_increment field:
-                if (insert_row[col] !== undefined) {
-                    throw new Error(
-                        `INSERT failed because column '${col}' in table '${tname}' ` +
-                        `is an auto_increment column but a value was specified`
-                    );
-                }
-
-                if (!insert_row[col]) {
-                    // auto increment the value
-                    // find the max value in the table, and add one.
-                    const newid = database[tname].map(row => row[col]).reduce((a, b) => Math.max(a, b), 0) + 1;
-                    insert_row[col] = newid;
-                }
-
-            }
-
-            if (schema[tname][col].not_null && !insert_row[col]) {
-                throw new Error(
-                    `INSERT value for column '${col}' in table '${tname}' ` +
-                    `cannot be NULL`
-                );
-            }
-
-            // autofill empty values to null
-            if (insert_row[col] === undefined) {
-                insert_row[col] = null;
-            }
-        }
-
-        // and insert:
-        database[tname].push(insert_row);
-        return true;
-    };
-
 }
 
 module.exports = evaluate;

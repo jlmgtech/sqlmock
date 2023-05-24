@@ -13,17 +13,19 @@ const test_queries = [
 
     // this one should check the schema and make sure that the table exists, the columns exist in the table, and 
     // that the types of the columns are correct. Also, it should enforce constraints.
-    ["INSERT INTO users(actorid, name) VALUES(1, 'test')", ""],
-    ["SELECT * FROM users WHERE name = 'test'", ""],
+    //["INSERT INTO users(actorid, name) VALUES(1, 'test')", ""],
+    //["SELECT * FROM users", ""],
 
     //next, you should be able to auto-increment the primary key:
-    //["INSERT INTO users(actorid, name) VALUES(1, 'test')", ""],
+    ["UPDATE users SET name = 'test2' WHERE name LIKE 'J%'", ""],
+    ["SELECT * FROM users", ""],
+    //["UPDATE users SET name = 'test2' WHERE actorid = 1", ""],
 
     //["SELECT 1"],
 
     // simple queries and joins:
     //["SELECT fname FROM actors", ""],
-    //["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
+    ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
     //["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
     //["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
 
