@@ -20,7 +20,7 @@ module.exports = function evaluate_update(evaluate, database, ast) {
 
     const tname = table.table;
     const schema = database.__schema__;
-    const set = ast.set;
+    const astset = ast.set;
     const where = ast.where;
     const orderby = ast.orderby;
     const limit = ast.limit;
@@ -37,7 +37,7 @@ module.exports = function evaluate_update(evaluate, database, ast) {
         evaluate_binary_expr(evaluate(database), where) :
         () => true;
 
-    const setters = set ? set.map(s => row => {
+    const setters = astset ? astset.map(s => row => {
         row[tname][s.column] = s.value.value;
     }) : [];
 
@@ -50,14 +50,14 @@ module.exports = function evaluate_update(evaluate, database, ast) {
     }
 
     // check the schema to make sure the fields exist:
-    for (const s of set) {
+    for (const s of astset) {
         if (!(s.column in schema[tname])) {
             throw new Error("UPDATE column does not exist: " + s.column);
         }
     }
 
     // check the types of the values:
-    for (const s of set) {
+    for (const s of astset) {
         const col = s.column;
         const val = s.value.value;
         if (schema[tname][col].type !== typeof val) {

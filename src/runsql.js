@@ -68,7 +68,8 @@ function validate_columns(columns, from_tables, database) {
 
     for (const column of columns) {
 
-        const [op, tname, cname] = column.split("::");
+        const [op, table, cname] = column.split("::");
+        let tname = table;
 
         if (cname === "(.*)") {
             if (from_tables.length > 1) {
@@ -77,17 +78,26 @@ function validate_columns(columns, from_tables, database) {
                     "multiple tables."
                 );
             }
-        } else {
-
-            // check that table is one of the tables in the query
-            if (!from_tables.includes(tname))
-                throw new Error(`Table ${tname} not in query`);
-
-            // check that column is in the table
-            if (!schema[tname].hasOwnProperty(cname))
-                throw new Error(`Column ${cname} does not exist in table ${tname}`);
-
+            column_tables["*"] = tname;
+            continue;
         }
+
+        if (tname === "null") {
+            const ambiguous = from_tables.filter(t => schema[t].hasOwnProperty(cname));
+            if (ambiguous.length > 1)
+                throw new Error(`Column ${cname} is ambiguous`);
+            column_tables[cname] = ambiguous[0];
+            tname = ambiguous[0];
+        }
+
+        // check that table is one of the tables in the query
+        if (!from_tables.includes(tname))
+            throw new Error(`Table ${tname} not in query`);
+
+        // check that column is in the table
+        if (!schema[tname].hasOwnProperty(cname))
+            throw new Error(`Column ${cname} does not exist in table ${tname}`);
+
 
         // and that the operation is supported
         if (!["delete", "select", "insert", "update"].includes(op))
@@ -97,14 +107,7 @@ function validate_columns(columns, from_tables, database) {
         // across all tables in the query (i.e. it is unambiguous).
         // While doing this, create a mapping of the column name to the table
         // name, so that we can use it later to resolve ambiguous columns.
-        if (tname === "null") {
-            const ambiguous = from_tables.filter(t => schema[t].hasOwnProperty(cname));
-            if (ambiguous.length > 1)
-                throw new Error(`Column ${cname} is ambiguous`);
-            column_tables[cname] = ambiguous[0];
-        } else {
-            column_tables[cname] = tname;
-        }
+        column_tables[cname] = tname;
 
         // NOTE - the way we want to do this when we switch to a tree
         // decorating strategy is to decorate the tree with the symbol

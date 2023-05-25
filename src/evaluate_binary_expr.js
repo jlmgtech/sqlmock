@@ -2,11 +2,13 @@ module.exports = function evaluate_binary_expr(evaluate, ast) {
 
     const lhs = evaluate(ast.left);
     if (typeof lhs !== "function") {
+        console.error("AST LEFT", ast.left);
         throw new TypeError(`lhs needs to be a function for '${ast.left.type}' node`);
     }
 
     const rhs = evaluate(ast.right);
     if (typeof rhs !== "function") {
+        console.error("AST RIGHT", ast.right);
         throw new TypeError(`rhs needs to be a function for '${ast.right.type}' node`);
     }
 

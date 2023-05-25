@@ -92,7 +92,7 @@ function evaluate(database) {
 
                 const orderby = ast.orderby ? ast.orderby.map(evaluate(database)) : null;
 
-                const limit   = ast.limit ? ast.limit.map(evaluate(database)) : null;
+                const limit = ast.limit ? evaluate_limit(database, ast.limit) : null;
 
                 return () => {
 
@@ -120,12 +120,20 @@ function evaluate(database) {
                             const sort = sorter();
                             joined = joined.sort(sort);
                         }
-                    }
-                    if (offset) {
-                        joined = joined.slice(...limit);
-                    }
+                    } 
+
                     if (limit) {
                         joined = joined.slice(0, ...limit);
+                    }
+                    if (offset) {
+                        if (limit) {
+                            limit[0] = offset;
+                        }
+                        joined = (
+                            joined
+                            .slice(limit[0])
+                            .slice(0, limit[1])
+                        );
                     }
 
                     // remove any columns that weren't "selected":
@@ -154,10 +162,6 @@ function evaluate(database) {
                     return results;
                 };
 
-            }
-
-            case "null": {
-                return null;
             }
 
             case "binary_expr":
@@ -194,11 +198,20 @@ function evaluate(database) {
             }
 
             case "DESC": {
-                const column = evaluate(database)(ast.expr);
-                return (a, b) => a[column] > b[column] ? -1 : 1;
+                // return sorting comparator; only one column supported for now
+                //const column = evaluate(database)(ast.expr);
+                if (!ast.expr.table && get("from_tables").length > 1) {
+                    throw new Error(`Cannot ORDER BY ambiguous table '${ast.expr.table}'`);
+                }
+                const table = ast.expr.table || get("from_tables")[0];
+                return row => (a, b) => a[table][ast.expr.column] > b[table][ast.expr.column] ? -1 : 1;
             }
 
             case "number": {
+                return () => ast.value;
+            }
+
+            case "null": {
                 return () => ast.value;
             }
 
@@ -217,5 +230,13 @@ function evaluate(database) {
 
     };
 }
+function evaluate_limit(database, astlimit) {
+    let limit = astlimit.value.map(l => evaluate(database)(l)())
+    if (limit.length === 1) {
+        limit.unshift(0);
+    }
+    return limit;
+}
+
 
 module.exports = evaluate;
