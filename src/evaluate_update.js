@@ -1,4 +1,4 @@
-const {GET_FROM_TABLES, SET_FROM_TABLES} = require('./from_tables.js');
+const {get, set} = require('./globals.js');
 const cartesian = require("./cartesian.js");
 const evaluate_binary_expr = require("./evaluate_binary_expr.js");
 
@@ -69,7 +69,7 @@ module.exports = function evaluate_update(evaluate, database, ast) {
     }
 
     return () => {
-        SET_FROM_TABLES([tname]);
+        set("from_tables", [tname]);
 
         // use the cartesian function to invert the SoA to AoS:
         const data = {};
@@ -89,7 +89,7 @@ module.exports = function evaluate_update(evaluate, database, ast) {
         }
 
         // 3. return the number of rows updated:
-        SET_FROM_TABLES([]);
+        set("from_tables", []);
         return rows.length;
     };
 };

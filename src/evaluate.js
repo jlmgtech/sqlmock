@@ -1,8 +1,9 @@
 const cartesian = require("./cartesian.js");
 const evaluate_insert = require("./evaluate_insert.js");
 const evaluate_update = require("./evaluate_update.js");
+const evaluate_delete = require("./evaluate_delete.js");
 const evaluate_binary_expr = require("./evaluate_binary_expr.js");
-const {GET_FROM_TABLES, SET_FROM_TABLES} = require("./from_tables.js");
+const {get, set} = require("./globals.js");
 
 function evaluate(database) {
 
@@ -13,7 +14,7 @@ function evaluate(database) {
         }
 
         if (!ast) {
-            return null;
+            throw new Error("AST is empty");
         }
 
         switch (ast.type) {
@@ -25,13 +26,16 @@ function evaluate(database) {
                 return evaluate_update(evaluate, database, ast);
 
             case "delete":
-                throw new Error("DELETE not yet implemented");
+                return evaluate_delete(evaluate, database, ast);
 
             case "select": {
 
                 const from_tables = ast.from?.map(f => f.table) ?? [];
-                SET_FROM_TABLES(from_tables);
-                const whereFilter = evaluate(database)(ast.where);
+                set("from_tables", from_tables);
+                const whereFilter = ast.where ?
+                    evaluate(database)(ast.where) :
+                    () => true;
+
                 // TODO - ON filter also!
 
                 const offset = null; // TODO
@@ -162,7 +166,7 @@ function evaluate(database) {
             case "column_ref": {
                 return (row, setvalue) => {
                     if (!row) throw new Error("row is undefined");
-                    if (!ast.table && GET_FROM_TABLES().length > 1) {
+                    if (!ast.table && get("from_tables").length > 1) {
                         console.log(ast.table);
                         console.log(Object.keys(row));
                         throw new Error(
@@ -170,7 +174,7 @@ function evaluate(database) {
                             "using multiple tables, you must specify the table name."
                         );
                     }
-                    const table = ast.table || GET_FROM_TABLES()[0];
+                    const table = ast.table || get("from_tables")[0];
                     return row[table][ast.column];
                 };
             }
@@ -182,10 +186,10 @@ function evaluate(database) {
             case "ASC": {
                 // return sorting comparator; only one column supported for now
                 //const column = evaluate(database)(ast.expr);
-                if (!ast.expr.table && GET_FROM_TABLES().length > 1) {
+                if (!ast.expr.table && get("from_tables").length > 1) {
                     throw new Error(`Cannot ORDER BY ambiguous table '${ast.expr.table}'`);
                 }
-                const table = ast.expr.table || GET_FROM_TABLES()[0];
+                const table = ast.expr.table || get("from_tables")[0];
                 return row => (a, b) => a[table][ast.expr.column] < b[table][ast.expr.column] ? -1 : 1;
             }
 
@@ -207,74 +211,7 @@ function evaluate(database) {
             }
 
             default:
-                if (!ast.type && ast.ast) {
-
-                    // This is a top-level statement:
-                    // check that the columns and tables etc exist against the schema!
-                    SET_FROM_TABLES([]);
-                    const schema = database.__schema__;
-
-
-                    // check that the tables ACTUALLY EXIST in the schema:
-                    for (const tab of ast.tableList) {
-                        const [op, dbname, tname] = tab.split(/::/g);
-                        if (typeof schema[tname] === "undefined") {
-                            throw new Error(`table '${tname}' doesn't exist!`);
-                        }
-                        if (tname === "__schema__") {
-                            throw new Error("__schema__ is not a valid table name!");
-                        }
-                        SET_FROM_TABLES([...GET_FROM_TABLES(), tname]);
-                    }
-
-                    // make sure the columns ACTUALLY EXIST in the schema:
-                    for (const col of ast.columnList) {
-                        const [op, table, cname] = col.split(/::/g);
-                        let tname = table;
-                        if (tname === "null") {
-                            tname = null;
-                            // find the table this is supposed to be in!
-                            for (const fromtable of GET_FROM_TABLES()) {
-                                if (typeof schema[fromtable][cname] !== "undefined") {
-                                    if (tname !== null) {
-                                        throw new Error(
-                                            `column '${cname}' is ambiguous af ` +
-                                            `(could be in '${tname}' or '${fromtable}')`
-                                        );
-                                    }
-                                    tname = fromtable;
-                                }
-                            }
-
-                            if (tname === null) {
-                                if (GET_FROM_TABLES().length === 1) {
-                                    throw new Error(
-                                        `table '${GET_FROM_TABLES()[0]}' has no ` +
-                                        `column named '${cname}'`
-                                    );
-                                } else {
-                                    throw new Error(
-                                        'None of the tables ' +
-                                        `(${GET_FROM_TABLES().join(', ')}) have a ` +
-                                        `column named "${cname}".`
-                                    );
-                                }
-                            }
-                        }
-
-                        if (typeof schema[tname][cname] === "undefined") {
-                            throw new Error(
-                                `column '${cname}' doesn't exist in ` +
-                                `schema for table '${table}'`
-                            );
-                        }
-                    }
-
-                    return evaluate(database)(ast.ast);
-                } else {
-                    console.error("ERROR:", ast);
-                    throw new Error(`"${ast.type}" is not implemented`);
-                }
+                throw new Error(`"${ast.type}" not supported`);
 
         }
 

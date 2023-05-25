@@ -1,9 +1,9 @@
-const {GET_FROM_TABLES, SET_FROM_TABLES} = require('./from_tables.js');
+const {get, set} = require('./globals.js');
 
 module.exports = function evaluate_select(database, ast) {
 
     const from_tables = ast.from?.map(f => f.table) ?? [];
-    SET_FROM_TABLES(from_tables);
+    set("from_tables", from_tables);
     const filter = evaluate(database)(ast.where);
     // TODO - ON filter also!
 

@@ -1,8 +1,6 @@
-const {Parser} = require("node-sql-parser/build/mysql");
-const evaluate = require("../src/evaluate.js");
+const runsql = require("../src/runsql.js");
 const fs = require("fs");
 const md5 = require('md5');
-const parser = new Parser();
 
 const database = JSON.parse(fs.readFileSync("./database.json", {encoding:"utf-8"}));
 if (!database) {
@@ -17,7 +15,8 @@ const test_queries = [
     //["SELECT * FROM users", ""],
 
     //next, you should be able to auto-increment the primary key:
-    ["UPDATE users SET name = 'test2' WHERE name LIKE 'J%'", ""],
+    //["UPDATE users SET name = 'test2' WHERE name LIKE 'J%'", ""],
+    ["DELETE FROM users WHERE users.name = 'Kana Smith'", ""],
     ["SELECT * FROM users", ""],
     //["UPDATE users SET name = 'test2' WHERE actorid = 1", ""],
 
@@ -25,7 +24,7 @@ const test_queries = [
 
     // simple queries and joins:
     //["SELECT fname FROM actors", ""],
-    ["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
+    //["SELECT actors.name as actor_name, actors.fname, users.name FROM actors, users WHERE actors.fname = 'John'", ""],
     //["SELECT actors.fname, users.name as username FROM actors JOIN users ON true", "2042399481af5f1ba0f9af04ac7e9f33"],
     //["SELECT actors.id as actor, users.id as user FROM actors, users", ""],
 
@@ -76,9 +75,7 @@ const test_queries = [
 ];
 
 for (const [query, expected] of test_queries) {
-    const ast = parser.astify(query);
-    const strategy = evaluate(database)(ast);
-    const result = strategy();
+    const result = runsql(query, database);
     const checksum = md5(JSON.stringify(result));
     console.log(query);
 
