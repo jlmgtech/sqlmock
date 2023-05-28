@@ -44,10 +44,17 @@ app.listen(PORT, () => {
 // for testing MySQL behavior ONLINE:
 // https://onecompiler.com/mysql/3z8ykhufy
 
-// TODO - INSERT
+// DONE - SELECT
+// DONE - INSERT
+// DONE - UPDATE
+// DONE - DELETE
 // TODO - GROUP BY
-// TODO - UPDATE
-// TODO - DELETE
+// TODO - subqueries 
+// Subqueries are used only within "IN" expressions, which means that the
+// result of a select statement executed within should yield the same type of
+// list as an expr list e.g. `(1, 2, 3)`. You will just need to write some
+// custom handling to accomodate that.
+//
 // TODO - CREATE TABLE
 // TODO - CREATE DATABASE
 // TODO - CREATE SCHEMA
@@ -60,8 +67,3 @@ app.listen(PORT, () => {
 // TODO - DROP SCHEMA
 // TODO - REPLACE
 // TODO - SHOW
-// TODO - subqueries 
-// Subqueries are used only within "IN" expressions, which means that the
-// result of a select statement executed within should yield the same type of
-// list as an expr list e.g. `(1, 2, 3)`. You will just need to write some
-// custom handling to accomodate that.
