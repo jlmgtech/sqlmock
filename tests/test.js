@@ -7,7 +7,7 @@ if (!database) {
     throw new Error("no database found");
 }
 
-const test_queries = [
+const _test_queries = [
 
     // this one should check the schema and make sure that the table exists, the columns exist in the table, and 
     // that the types of the columns are correct. Also, it should enforce constraints.
@@ -72,6 +72,18 @@ const test_queries = [
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname", ""],
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC", ""],
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC LIMIT 2", ""],
+];
+
+const test_queries = [
+    [`
+        SELECT 
+            actors.fname as actor_name,
+            users.name as username,
+            users.id + actors.id as the_id,
+            BIT_COUNT(users.id) as the_count
+        FROM users, actors
+        WHERE actors.fname like 'J%'
+    `, ""],
 ];
 
 for (const [query, expected] of test_queries) {

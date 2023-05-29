@@ -3,6 +3,7 @@ const evaluate_insert = require("./evaluate_insert.js");
 const evaluate_update = require("./evaluate_update.js");
 const evaluate_delete = require("./evaluate_delete.js");
 const evaluate_binary_expr = require("./evaluate_binary_expr.js");
+const evaluate_function = require("./evaluate_function.js");
 const {get, set} = require("./globals.js");
 
 function evaluate(database) {
@@ -51,36 +52,65 @@ function evaluate(database) {
                     // {"actors": ["fname"],"users":["id"]}
                     const newrec = {};
                     for (const col of ast.columns) {
-                        const as = col.as;
-                        const type = col.expr?.type ?? "";
+
+                        const val = evaluate(database)(col.expr);
+                        const tname = col.expr?.table ?? from_tables[0];
                         const cname = col.expr?.column ?? "";
-                        const column_table = col.expr?.table ?? "";
+                        // ^^^ HACK! grabbing the column/table name from the
+                        // column_ref node directly if it exists, instead of
+                        // using the evaluate function. How will that work?
+                        // Maybe the column ref sets a global? Is that any
+                        // better? I don't know. This is why we should be
+                        // performing multiple decorative passes over the AST.
+                        // The node could just have the cname on it, you know?
+                        // How cool would that be? Then we could just do:
+                        // const cname = col.expr.cname;
+                        // And it would ALWAYS be there. No need to set a
+                        // global. No need to do anything. Just grab it.
+                        // But that's not how it works right now. So we have
+                        // to do this hacky thing. It's not the end of the
+                        // world. It's just not as clean as it could be.
+                        // A lot of the meaningless stuff in this rant was
+                        // copilot adding hyperbole, such as "the end of the
+                        // world". I'm not sure why it does that. It's
+                        // probably just trying to be funny. I don't know.
+                        // I'm not a copilot expert. I'm just a guy who
+                        // likes to write code. I'm not even a very good
+                        // coder. I'm just a guy who likes to write code.
+                        // I'm not sure how I feel about that. It's kind of
+                        // cool. But it's also kind of weird. I don't know. I
+                        // guess I'll leave it in for now. It's not hurting
+                        // anything. It's just a little weird. I don't know.
+                        const asname = col.as || cname;
+                        newrec[tname] = newrec[tname] || {};
 
-                        // do checking to make sure columns are legit:
-                        if (from_tables.length > 1 && !column_table) {
-                            throw new Error(
-                                `Ambiguous column '${cname}' when using ` +
-                                "multiple tables."
-                            );
-                        }
+                        if (asname === "")
+                            throw new Error("Empty column name without an alias");
+                        if (typeof newrec[tname][asname] !== "undefined")
+                            throw new Error(`Duplicate column name '${asname}'`);
 
-                        const tname = column_table || from_tables[0];
-                        if (type === "column_ref") {
-                            // just copy over the column from the respective table
-                            // in the old record
-                            newrec[tname] = newrec[tname] || {};
-                            const asname = as || cname;
-                            otherval = record[tname][cname];
-                            newrec[tname][asname] = otherval;
-                        } else {
-                            console.log(type);
-                            const asname = as || type;
-                            newrec[tname][asname] = evaluate(database)(type);
-                        }
+                        newrec[tname][asname] = val(record);
                     }
 
                     return newrec;
                 };
+
+                // TODO - binary_expr, function, column_ref, etc can be evaluated in several parts of a query, but they should be able to share the same code.
+                // For instance, a binary expr can exist as a column, e.g. SELECT a + b AS c FROM table
+                // but it can also exist in the WHERE clause, e.g. SELECT * FROM table WHERE a > b.
+                // Binary expressions need a left and right side, and often the left and right side need access to the current row AT TIME OF EXECUTION!
+                // This means that evaluating a binary_expr should return a thunk that can be evaluated at the time of execution with access to the row.
+                //
+                // The problem, as in the above example, is that when it's
+                // eval'd as a column, it will be executed as a "map" operation
+                // over the tables, but when it's eval'd in the WHERE clause,
+                // it will be executed as a "filter" operation over the tables.
+                // Both will supply the record to the thunk.
+                //
+                // This is fine for the binary_expr, but the column ref for
+                // instance can be part of an assignment. This means when you
+                // eval a column_ref, the same thunk that is returned somehow
+                // has to be usable as both a setter and a getter.
 
                 // TODO - order by needs to respect that there are records from multiple tables in each row:
                 //const ast_order_by = [
@@ -179,7 +209,12 @@ function evaluate(database) {
                         );
                     }
                     const table = ast.table || get("from_tables")[0];
-                    return row[table][ast.column];
+
+                    if (setvalue) {
+                        return row[table][ast.column] = setvalue;
+                    } else {
+                        return row[table][ast.column];
+                    }
                 };
             }
 
@@ -221,6 +256,10 @@ function evaluate(database) {
 
             case "single_quote_string": {
                 return () => ast.value;
+            }
+
+            case "function": {
+                return evaluate_function(evaluate(database), ast);
             }
 
             default:

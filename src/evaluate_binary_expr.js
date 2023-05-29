@@ -1,18 +1,19 @@
 module.exports = function evaluate_binary_expr(evaluate, ast) {
 
-    const lhs = evaluate(ast.left);
+    const lhs = evaluate(ast.left); // usually column_ref
     if (typeof lhs !== "function") {
         console.error("AST LEFT", ast.left);
         throw new TypeError(`lhs needs to be a function for '${ast.left.type}' node`);
     }
 
-    const rhs = evaluate(ast.right);
+    const rhs = evaluate(ast.right); // usually column_ref
     if (typeof rhs !== "function") {
         console.error("AST RIGHT", ast.right);
         throw new TypeError(`rhs needs to be a function for '${ast.right.type}' node`);
     }
 
     switch (ast.operator) {
+        // boolean operators:
         case "LIKE": {
             return (row) => {
                 const expr = rhs(row)
@@ -73,7 +74,45 @@ module.exports = function evaluate_binary_expr(evaluate, ast) {
         case "OR": {
             return (row) => lhs(row) || rhs(row);
         }
+
+        // arithmetic operators:
+        case "+": {
+            return (row) => lhs(row) + rhs(row);
+        }
+        case "-": {
+            return (row) => lhs(row) - rhs(row);
+        }
+        case "*": {
+            return (row) => lhs(row) * rhs(row);
+        }
+        case "/": {
+            return (row) => lhs(row) / rhs(row);
+        }
+        case "%": {
+            return (row) => lhs(row) % rhs(row);
+        }
+        case "^": {
+            return (row) => lhs(row) ** rhs(row);
+        }
+
+        // bitwise operators:
+        case "&": {
+            return (row) => lhs(row) & rhs(row);
+        }
+        case "|": {
+            return (row) => lhs(row) | rhs(row);
+        }
+        case "<<": {
+            return (row) => lhs(row) << rhs(row);
+        }
+        case ">>": {
+            return (row) => lhs(row) >> rhs(row);
+        }
+        case "~": {
+            return (row) => lhs(row) ^ rhs(row);
+        }
+
         default:
             throw new Error(`Unsupported operator: "${ast.operator}"`);
     }
-}
+};
