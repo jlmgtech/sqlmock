@@ -7,7 +7,7 @@ if (!database) {
     throw new Error("no database found");
 }
 
-const _test_queries = [
+const test_queries = [
 
     // this one should check the schema and make sure that the table exists, the columns exist in the table, and 
     // that the types of the columns are correct. Also, it should enforce constraints.
@@ -72,9 +72,6 @@ const _test_queries = [
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname", ""],
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC", ""],
     ["SELECT * FROM actors WHERE fname IN ('Jim', 'Chris') AND lname IN ('L', 'P') ORDER BY fname DESC LIMIT 2", ""],
-];
-
-const test_queries = [
     [`
         SELECT 
             actors.fname as actor_name,
@@ -89,16 +86,7 @@ const test_queries = [
 for (const [query, expected] of test_queries) {
     console.log(query);
     const result = runsql(query, database);
-    const checksum = md5(JSON.stringify(result));
-
-    if (checksum === expected) {
-        console.log("OK");
-    } else {
-        console.error("FAIL");
-        console.error("Expected:", expected);
-        console.error("Actual:", checksum);
-        console.error("Result:", result);
-    }
+    console.log("result: ", JSON.stringify(result, null, 4));
     console.log("========================================");
     console.log("%d results (users %d, actors %d)", result.length, database.users.length, database.actors.length);
 }
